@@ -15,22 +15,36 @@ module RailsSqlViews
       def supports_views?
         true
       end
-      
-      def base_tables(name = nil) #:nodoc:
+                  
+      def base_tables(name = nil, database = nil, like = nil) #:nodoc:
+        sql = "SHOW FULL TABLES "
+        sql << "IN #{quote_table_name(database)} " if database
+        sql << "WHERE TABLE_TYPE='BASE TABLE'"
+        
         tables = []
-        execute("SHOW FULL TABLES WHERE TABLE_TYPE='BASE TABLE'").each{|row| tables << row[0]}
+        execute_and_free(sql, 'SCHEMA') do |result|
+          tables = result.collect { |field| field.first }
+        end
+        return tables.select { |value| value == like} if like
         tables
       end
       alias nonview_tables base_tables
       
-      def views(name = nil) #:nodoc:
-        views = []
-        execute("SHOW FULL TABLES WHERE TABLE_TYPE='VIEW'").each{|row| views << row[0]}
-        views
+      def views(name = nil, database = nil, like = nil) #:nodoc:
+        sql = "SHOW FULL TABLES "
+        sql << "IN #{quote_table_name(database)} " if database
+        sql << "WHERE TABLE_TYPE='VIEW'"
+        
+        tables = []
+        execute_and_free(sql, 'SCHEMA') do |result|
+          tables = result.collect { |field| field.first }
+        end
+        return tables.select { |value| value == like} if like
+        tables
       end
 
-      def tables_with_views_included(name = nil)
-        nonview_tables(name) + views(name)
+      def tables_with_views_included(name = nil, database = nil, like = nil)
+        nonview_tables(name, database, like) + views(name, database, like)
       end
       
       def structure_dump
